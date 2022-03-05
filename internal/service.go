@@ -163,18 +163,19 @@ func (s *Service) PingNodes() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			stats, err := pingIP(node.InternalIP)
+			stats, err := pingIPOnce(node.InternalIP)
 			if err != nil {
 				Error.Printf("Unable to ping %s: %v\n", node.InternalIP.String(), node)
 				return
 			}
-			reachableFloat := 0.0
-			if stats.PacketsRecv > 0 {
-				reachableFloat = 1.0
-			}
 			prom := s.PrometheusForTarget(node.Name)
-			prom.Reachable.Set(reachableFloat)
-			prom.Latency.Observe(stats.AvgRtt.Seconds())
+
+			if stats.PacketsRecv > 0 {
+				prom.Reachable.Set(1.0)
+				prom.Latency.Observe(stats.AvgRtt.Seconds())
+			} else {
+				prom.Reachable.Set(0.0)
+			}
 			prom.PacketsSent.Add(float64(stats.PacketsSent))
 			prom.PacketsReceived.Add(float64(stats.PacketsRecv))
 			prom.PacketsLost.Add(float64(stats.PacketsSent - stats.PacketsRecv))
