@@ -13,6 +13,7 @@ func pingIPOnce(ip net.IP) (*ping.Statistics, error) {
 	if err != nil {
 		return nil, fmt.Errorf("unable to create pinger for %s: %w", ip.String(), err)
 	}
+	pinger.SetPrivileged(true)
 	pinger.Count = 1
 	pinger.Timeout = 3 * time.Second
 	if err := pinger.Run(); err != nil {

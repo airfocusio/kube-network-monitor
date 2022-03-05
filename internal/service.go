@@ -165,7 +165,7 @@ func (s *Service) PingNodes() error {
 			defer wg.Done()
 			stats, err := pingIPOnce(node.InternalIP)
 			if err != nil {
-				Error.Printf("Unable to ping %s: %v\n", node.InternalIP.String(), node)
+				Error.Printf("Unable to ping %s: %v\n", node.InternalIP.String(), err)
 				return
 			}
 			prom := s.PrometheusForTarget(node.Name)
