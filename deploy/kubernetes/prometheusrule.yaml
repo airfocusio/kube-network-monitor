@@ -1,0 +1,18 @@
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: kube-network-monitor
+  namespace: kube-system
+  labels:
+    app: kube-network-monitor
+spec:
+  groups:
+    - name: kube-network-monitor
+      rules:
+        - alert: NetworkMonitorNodeUnreachable
+          annotations:
+            description: The node {{ $labels.target }} is unreachable from the node {{ $labels.source }}.
+            summary: Node is {{ $labels.target }} unreachable.
+          expr: min by (source, target) (network_monitor_reachable) == 0
+          labels:
+            severity: critical
