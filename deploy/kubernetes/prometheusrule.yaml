@@ -16,3 +16,11 @@ spec:
           expr: min by (source, target) (network_monitor_reachable) == 0
           labels:
             severity: critical
+        - alert: NetworkMonitorPacketLoss
+          annotations:
+            description: Between the node {{ $labels.source }} and {{ $labels.target }} there is packet loss.
+            summary: Packet loss between {{ $labels.source }} and {{ $labels.target }}.
+          for: 1m
+          expr: max by (source, target) (rate(network_monitor_packets_lost[5m]) / rate(network_monitor_packets_sent[5m])) > 0
+          labels:
+            severity: critical
