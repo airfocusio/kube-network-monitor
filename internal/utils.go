@@ -8,10 +8,10 @@ import (
 	"github.com/go-ping/ping"
 )
 
-func pingIP(ip net.IP) (bool, time.Duration, error) {
+func pingIP(ip net.IP) (*ping.Statistics, error) {
 	pinger, err := ping.NewPinger(ip.String())
 	if err != nil {
-		return false, time.Duration(0), fmt.Errorf("unable to create pinger for %s: %w", ip.String(), err)
+		return nil, fmt.Errorf("unable to create pinger for %s: %w", ip.String(), err)
 	}
 	pinger.SetPrivileged(true)
 	pinger.Count = 3
@@ -19,8 +19,7 @@ func pingIP(ip net.IP) (bool, time.Duration, error) {
 	pinger.Timeout = 10 * time.Second
 	err = pinger.Run()
 	if err != nil {
-		return false, time.Duration(0), fmt.Errorf("unable to ping %s", ip.String())
+		return nil, fmt.Errorf("unable to ping %s", ip.String())
 	}
-	stats := pinger.Statistics()
-	return stats.PacketsRecv > 0, stats.AvgRtt, nil
+	return pinger.Statistics(), nil
 }

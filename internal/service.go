@@ -32,8 +32,11 @@ type Service struct {
 }
 
 type ServicePrometheus struct {
-	Reachable prometheus.Gauge
-	Latency   prometheus.Histogram
+	Reachable       prometheus.Gauge
+	Latency         prometheus.Histogram
+	PacketsSent     prometheus.Counter
+	PacketsReceived prometheus.Counter
+	PacketsLost     prometheus.Counter
 }
 
 type ServiceNode struct {
@@ -131,8 +134,23 @@ func (s *Service) PrometheusForTarget(target string) *ServicePrometheus {
 			Buckets:     prometheus.ExponentialBuckets(0.000125, 2, 14),
 			ConstLabels: promLabels,
 		}),
+		PacketsSent: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace:   prometheusNamespace,
+			Name:        "packets_sent",
+			ConstLabels: promLabels,
+		}),
+		PacketsReceived: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace:   prometheusNamespace,
+			Name:        "packets_received",
+			ConstLabels: promLabels,
+		}),
+		PacketsLost: prometheus.NewCounter(prometheus.CounterOpts{
+			Namespace:   prometheusNamespace,
+			Name:        "packets_lost",
+			ConstLabels: promLabels,
+		}),
 	}
-	prometheus.MustRegister(prom.Reachable, prom.Latency)
+	prometheus.MustRegister(prom.Reachable, prom.Latency, prom.PacketsSent, prom.PacketsReceived, prom.PacketsLost)
 
 	s.Prometheus[target] = prom
 	return prom
@@ -145,18 +163,21 @@ func (s *Service) PingNodes() error {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			reachable, latency, err := pingIP(node.InternalIP)
+			stats, err := pingIP(node.InternalIP)
 			if err != nil {
 				Error.Printf("Unable to ping %s: %v\n", node.InternalIP.String(), node)
 				return
 			}
 			reachableFloat := 0.0
-			if reachable {
+			if stats.PacketsRecv > 0 {
 				reachableFloat = 1.0
 			}
 			prom := s.PrometheusForTarget(node.Name)
 			prom.Reachable.Set(reachableFloat)
-			prom.Latency.Observe(latency.Seconds())
+			prom.Latency.Observe(stats.AvgRtt.Seconds())
+			prom.PacketsSent.Add(float64(stats.PacketsSent))
+			prom.PacketsReceived.Add(float64(stats.PacketsRecv))
+			prom.PacketsLost.Add(float64(stats.PacketsSent - stats.PacketsRecv))
 		}()
 	}
 	wg.Wait()
