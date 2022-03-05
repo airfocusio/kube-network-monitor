@@ -1,4 +1,4 @@
-FROM alpine:3.15
+FROM scratch
 ENTRYPOINT ["/bin/kube-network-monitor"]
 COPY kube-network-monitor /bin/kube-network-monitor
 WORKDIR /workdir
