@@ -1,0 +1,13 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: kube-network-monitor
+  namespace: kube-system
+  labels:
+    app: kube-network-monitor
+spec:
+  selector:
+    matchLabels:
+      app: kube-network-monitor
+  endpoints:
+    - port: metrics
