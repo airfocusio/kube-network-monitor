@@ -17,7 +17,7 @@ spec:
       serviceAccountName: kube-network-monitor
       containers:
       - name: kube-network-monitor
-        image: ghcr.io/airfocusio/kube-network-monitor:0.1.0-alpha.5
+        image: ghcr.io/airfocusio/kube-network-monitor:0.1.0-rc.1
         args:
           - --self-node-name=$(NODE_NAME)
         env:

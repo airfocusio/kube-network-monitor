@@ -445,7 +445,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        image: ghcr.io/airfocusio/kube-network-monitor:0.1.0-alpha.5
+        image: ghcr.io/airfocusio/kube-network-monitor:0.1.0-rc.1
         name: kube-network-monitor
         ports:
         - containerPort: 1024
