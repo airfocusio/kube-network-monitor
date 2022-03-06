@@ -16,3 +16,6 @@ build:
 
 release:
 	goreleaser release --rm-dist
+
+regenerate-deploy:
+	kustomize build deploy/kubernetes > deploy/kubernetes/manifests.yaml

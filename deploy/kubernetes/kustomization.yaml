@@ -6,3 +6,4 @@ resources:
   - service.yaml
   - servicemonitor.yaml
   - prometheusrule.yaml
+  - grafana-dashboard.yaml
