@@ -445,7 +445,7 @@ spec:
           valueFrom:
             fieldRef:
               fieldPath: spec.nodeName
-        image: ghcr.io/airfocusio/kube-network-monitor:0.1.0-rc.1
+        image: ghcr.io/airfocusio/kube-network-monitor:0.1.0-rc.2
         name: kube-network-monitor
         ports:
         - containerPort: 1024
@@ -474,6 +474,7 @@ spec:
           $labels.source }}.
         summary: Node is {{ $labels.target }} unreachable.
       expr: min by (source, target) (network_monitor_reachable) == 0
+      for: 5m
       labels:
         severity: critical
     - alert: NetworkMonitorPacketLoss
@@ -481,9 +482,8 @@ spec:
         description: Between the node {{ $labels.source }} and {{ $labels.target }}
           there is packet loss.
         summary: Packet loss between {{ $labels.source }} and {{ $labels.target }}.
-      expr: max by (source, target) (rate(network_monitor_packets_lost[5m]) / rate(network_monitor_packets_sent[5m]))
-        > 0
-      for: 1m
+      expr: max by (source, target) (rate(network_monitor_packets_lost[1m])) > 0
+      for: 5m
       labels:
         severity: critical
 ---
