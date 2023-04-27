@@ -3,7 +3,7 @@ module github.com/airfocusio/kube-network-monitor
 go 1.17
 
 require (
-	github.com/go-ping/ping v0.0.0-20211130115550-779d1e919534
+	github.com/go-ping/ping v1.1.0
 	github.com/prometheus/client_golang v1.14.0
 	github.com/spf13/cobra v1.3.0
 	k8s.io/apimachinery v0.23.4
