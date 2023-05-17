@@ -1,20 +1,34 @@
 package e2e
 
 import (
+	"bytes"
 	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
 	"path"
-	"runtime"
+	"strings"
 	"testing"
 	"time"
+
+	"k8s.io/utils/strings/slices"
 )
 
 const (
 	kindBin       = "kind"
 	kubectlBin    = "kubectl"
 	goreleaserBin = "goreleaser"
+)
+
+var (
+	configDebug       = slices.Contains([]string{"1", "yes", "true"}, os.Getenv("E2E_DEBUG"))
+	configKeepCluster = slices.Contains([]string{"1", "yes", "true"}, os.Getenv("E2E_KEEP_CLUSTER"))
+)
+
+var (
+	kindClusterName           = "kube-network-monitor"
+	kindClusterKubectlContext = "kind-" + kindClusterName
 )
 
 func TestMain(t *testing.M) {
@@ -25,6 +39,21 @@ func TestMain(t *testing.M) {
 }
 
 func startCluster() {
+	stopCluster()
+	if configKeepCluster {
+		result, err := cmd(
+			kindBin,
+			[]string{"get", "clusters"},
+			cmdOpts{},
+		)
+		if err != nil {
+			panic(err)
+		}
+		if slices.Contains(strings.Split(string(result), "\n"), kindClusterName) {
+			return
+		}
+	}
+
 	fmt.Printf("startCluster\n")
 	if err := write(".tmp/e2e/kind", map[string]string{
 		"config.yaml": `kind: Cluster
@@ -37,34 +66,24 @@ nodes:
 	}); err != nil {
 		panic(err)
 	}
-	if err := cmd(
+	if _, err := cmd(
 		kindBin,
-		[]string{"create", "cluster", "--name", "kube-network-monitor", "--config", ".tmp/e2e/kind/config.yaml", "--image", "kindest/node:v1.26.4"},
+		[]string{"create", "cluster", "--name", kindClusterName, "--config", ".tmp/e2e/kind/config.yaml", "--image", "kindest/node:v1.26.4"},
 		cmdOpts{Timeout: 5 * time.Minute},
-	); err != nil {
-		panic(err)
-	}
-	if err := cmd(
-		goreleaserBin,
-		[]string{"release", "--clean", "--skip-publish", "--snapshot"},
-		cmdOpts{Timeout: 5 * time.Minute},
-	); err != nil {
-		panic(err)
-	}
-	if err := cmd(
-		kindBin,
-		[]string{"load", "docker-image", "--name", "kube-network-monitor", fmt.Sprintf("ghcr.io/airfocusio/kube-network-monitor:0.0.0-dev-%s", runtime.GOARCH)},
-		cmdOpts{},
 	); err != nil {
 		panic(err)
 	}
 }
 
 func stopCluster() {
+	if configKeepCluster {
+		return
+	}
+
 	fmt.Printf("stopCluster\n")
-	if err := cmd(
+	if _, err := cmd(
 		kindBin,
-		[]string{"delete", "cluster", "--name", "kube-network-monitor"},
+		[]string{"delete", "cluster", "--name", kindClusterName},
 		cmdOpts{},
 	); err != nil {
 		panic(err)
@@ -75,7 +94,7 @@ type cmdOpts struct {
 	Timeout time.Duration
 }
 
-func cmd(name string, arg []string, opts cmdOpts) error {
+func cmd(name string, arg []string, opts cmdOpts) ([]byte, error) {
 	fmt.Printf("cmd %s %v\n", name, arg)
 	timeout := time.Minute
 	if opts.Timeout != 0 {
@@ -85,9 +104,18 @@ func cmd(name string, arg []string, opts cmdOpts) error {
 	defer done()
 	cmd := exec.CommandContext(ctx, name, arg...)
 	cmd.Dir = ".."
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	return cmd.Run()
+
+	var b bytes.Buffer
+	if configDebug {
+		cmd.Stdout = multiWriter{Writers: []io.Writer{&b, os.Stdout}}
+		cmd.Stderr = multiWriter{Writers: []io.Writer{&b, os.Stderr}}
+	} else {
+		cmd.Stdout = &b
+		cmd.Stderr = &b
+	}
+
+	err := cmd.Run()
+	return b.Bytes(), err
 }
 
 func write(dir string, files map[string]string) error {
@@ -104,4 +132,19 @@ func write(dir string, files map[string]string) error {
 		}
 	}
 	return nil
+}
+
+type multiWriter struct {
+	Writers []io.Writer
+	Writer2 io.Writer
+}
+
+func (ms multiWriter) Write(p []byte) (n int, err error) {
+	for _, w := range ms.Writers {
+		_, err := w.Write(p)
+		if err != nil {
+			return 0, err
+		}
+	}
+	return len(p), nil
 }
