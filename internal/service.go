@@ -210,6 +210,21 @@ func (s *Service) UpdateNodes() error {
 			continue
 		}
 
+		ignore := false
+		for _, taint := range node.Spec.Taints {
+			if taint.Key == "node.kubernetes.io/not-ready" {
+				ignore = true
+				continue
+			}
+			if taint.Key == "node.kubernetes.io/unschedulable" {
+				ignore = true
+				continue
+			}
+		}
+		if ignore {
+			continue
+		}
+
 		for _, address := range node.Status.Addresses {
 			if address.Type == "InternalIP" {
 				internalIP = net.ParseIP(address.Address)
