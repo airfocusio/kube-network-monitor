@@ -1,21 +1,13 @@
 .PHONY: *
 
 test:
-	go test -v ./...
+	go test -v $(shell go list ./... | grep -v e2e)
 
-test-watch:
-	watch -n1 go test -v -timeout 60m ./...
-
-test-cover:
-	go test -coverprofile=coverage.out ./...
-	go tool cover -func=coverage.out
-	go tool cover -html=coverage.out
+test-e2e:
+	go test -v $(shell go list ./... | grep e2e) -timeout 60m -count 1
 
 build:
-	goreleaser release --rm-dist --skip-publish --snapshot
+	goreleaser release --clean --skip-publish --snapshot
 
 release:
-	goreleaser release --rm-dist
-
-regenerate-deploy:
-	kustomize build deploy/kubernetes > deploy/kubernetes/manifests.yaml
+	goreleaser release --clean
