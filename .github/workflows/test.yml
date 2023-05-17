@@ -16,15 +16,21 @@ jobs:
       with:
         go-version: 1.19.x
     - uses: actions/checkout@v2
-    - name: Install talosctl
+    - name: Install binaries
       run: |
-        mkdir -p $HOME/bin
-        wget -qO $HOME/bin/talosctl https://github.com/talos-systems/talos/releases/download/v0.14.2/talosctl-linux-amd64
-        chmod +x $HOME/bin/talosctl
-        echo "$HOME/bin" >> $GITHUB_PATH
+        mkdir /opt/goreleaser
+        cd /opt/goreleaser
+        curl -fsSL https://github.com/goreleaser/goreleaser/releases/download/v1.18.2/goreleaser_Linux_x86_64.tar.gz | tar xz
+        chmod +x goreleaser
+        echo "/opt/goreleaser" >> $GITHUB_PATH
+        mkdir /opt/kind
+        cd /opt/kind
+        curl -fsSL https://kind.sigs.k8s.io/dl/v0.19.0/kind-linux-amd64 > kind
+        chmod +x kind
+        echo "/opt/kind" >> $GITHUB_PATH
     - name: Build sources
       run: go build ./...
     - name: Run tests
-      run: go test -v -timeout 60m ./...
-      env:
-        HCLOUD_TOKEN: ${{ secrets.HCLOUD_TOKEN }}
+      run: make test
+    - name: Run tests e2e
+      run: make test-e2e
