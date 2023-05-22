@@ -6,4 +6,10 @@ resources:
   - service.yaml
   - servicemonitor.yaml
   - prometheusrule.yaml
-  - grafana-dashboard.yaml
+configMapGenerator:
+  - name: kube-network-monitor-dashboard
+    namespace: kube-system
+    files:
+      - kube-network-monitor-dashboard.json
+generatorOptions:
+  disableNameSuffixHash: true
