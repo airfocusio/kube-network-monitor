@@ -354,7 +354,7 @@
           "refId": "A"
         }
       ],
-      "title": "Panel Title",
+      "title": "Packet Loss",
       "type": "timeseries"
     }
   ],
