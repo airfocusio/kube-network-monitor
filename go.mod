@@ -6,7 +6,7 @@ require (
 	github.com/go-ping/ping v1.1.0
 	github.com/prometheus/client_golang v1.15.1
 	github.com/spf13/cobra v1.7.0
-	k8s.io/apimachinery v0.27.2
+	k8s.io/apimachinery v0.27.3
 	k8s.io/client-go v0.27.2
 	k8s.io/utils v0.0.0-20230209194617-a36077c30491
 )
