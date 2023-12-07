@@ -1,6 +1,6 @@
 module github.com/airfocusio/kube-network-monitor
 
-go 1.20
+go 1.21
 
 require (
 	github.com/go-ping/ping v1.1.0
