@@ -5,7 +5,7 @@ go 1.21
 require (
 	github.com/go-ping/ping v1.1.0
 	github.com/prometheus/client_golang v1.16.0
-	github.com/spf13/cobra v1.7.0
+	github.com/spf13/cobra v1.8.0
 	k8s.io/apimachinery v0.28.4
 	k8s.io/client-go v0.28.4
 	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2
