@@ -39,6 +39,33 @@ type ServicePrometheus struct {
 	PacketsLost     prometheus.Counter
 }
 
+func (sp ServicePrometheus) Register() error {
+	if err := prometheus.Register(sp.Reachable); err != nil {
+		return err
+	}
+	if err := prometheus.Register(sp.Latency); err != nil {
+		return err
+	}
+	if err := prometheus.Register(sp.PacketsSent); err != nil {
+		return err
+	}
+	if err := prometheus.Register(sp.PacketsReceived); err != nil {
+		return err
+	}
+	if err := prometheus.Register(sp.PacketsLost); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (sp ServicePrometheus) Unregister() {
+	prometheus.Unregister(sp.Reachable)
+	prometheus.Unregister(sp.Latency)
+	prometheus.Unregister(sp.PacketsSent)
+	prometheus.Unregister(sp.PacketsReceived)
+	prometheus.Unregister(sp.PacketsLost)
+}
+
 type ServiceNode struct {
 	Name       string
 	InternalIP net.IP
@@ -110,12 +137,12 @@ func (s *Service) Run(stop <-chan os.Signal) error {
 	}
 }
 
-func (s *Service) PrometheusForTarget(target string) *ServicePrometheus {
+func (s *Service) PrometheusForTarget(target string) (*ServicePrometheus, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
 	if prom, ok := s.Prometheus[target]; ok {
-		return prom
+		return prom, nil
 	}
 
 	promLabels := prometheus.Labels{
@@ -150,13 +177,45 @@ func (s *Service) PrometheusForTarget(target string) *ServicePrometheus {
 			ConstLabels: promLabels,
 		}),
 	}
-	prometheus.MustRegister(prom.Reachable, prom.Latency, prom.PacketsSent, prom.PacketsReceived, prom.PacketsLost)
+
+	Info.Printf("Adding target %s\n", target)
+	if err := prom.Register(); err != nil {
+		return nil, err
+	}
 
 	s.Prometheus[target] = prom
-	return prom
+	return prom, nil
+}
+
+func (s *Service) CleanupPrometheusTargets() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	prometheus := map[string]*ServicePrometheus{}
+
+	for target, prom := range s.Prometheus {
+		exists := false
+		for _, node := range s.Nodes {
+			if node.Name == target {
+				exists = true
+				break
+			}
+		}
+
+		if exists {
+			prometheus[target] = prom
+		} else {
+			Info.Printf("Removing target %s\n", target)
+			prom.Unregister()
+		}
+	}
+
+	s.Prometheus = prometheus
 }
 
 func (s *Service) PingNodes() error {
+	s.CleanupPrometheusTargets()
+
 	wg := sync.WaitGroup{}
 	for _, node := range s.Nodes {
 		node := node
@@ -172,7 +231,11 @@ func (s *Service) PingNodes() error {
 			if packetsLost > 0 {
 				Info.Printf("Pinging %s lost %d of %d packets", node.InternalIP.String(), packetsLost, stats.PacketsSent)
 			}
-			prom := s.PrometheusForTarget(node.Name)
+			prom, err := s.PrometheusForTarget(node.Name)
+			if err != nil {
+				Error.Printf("Unable to register prometheus metrics: %v\n", err)
+				return
+			}
 
 			if stats.PacketsRecv > 0 {
 				prom.Reachable.Set(1.0)
