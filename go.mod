@@ -5,7 +5,7 @@ go 1.22.0
 toolchain go1.22.6
 
 require (
-	github.com/go-ping/ping v1.1.0
+	github.com/go-ping/ping v1.2.0
 	github.com/prometheus/client_golang v1.20.5
 	github.com/spf13/cobra v1.8.1
 	k8s.io/apimachinery v0.31.2
